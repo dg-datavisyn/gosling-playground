@@ -2,6 +2,10 @@
   text-align: center;
 }
 
+.lu-wrapper{
+  height: 800px;
+}
+
 .App-logo {
   height: 40vmin;
   pointer-events: none;
@@ -36,8 +40,3 @@
     transform: rotate(360deg);
   }
 }
-
-.lineup-engine {
-  footer {
-    display: block!important;
-  }

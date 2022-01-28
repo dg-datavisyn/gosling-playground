@@ -23,7 +23,8 @@
     "web-vitals": "^1.0.1",
     "generic-filehandle": "2.2.1",
     "lineupjsx": "4.0.0",
-    "tslib": "2.3.1"
+    "tslib": "2.3.1",
+    "ts-debounce": "4.0.0"
   },
   "devDependencies": {
     "gh-pages": "^3.1.0"

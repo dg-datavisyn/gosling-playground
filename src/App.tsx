@@ -6,7 +6,7 @@ import {ChromosomeInfo} from 'higlass';
 import React from 'react';
 import LineUp from 'lineupjsx';
 import data from './Export.json'
-const LineUpJS = require("lineupjsx");
+import { debounce } from 'ts-debounce';
 
 const arr = data as any[];
 
@@ -14,7 +14,7 @@ const goslingSpec = (domain: any, mark: any, binSize: any, height: any, hoveredS
   return {
     "title": "Visual Linking",
     "subtitle": "Change the position and range of brushes to update the detail view on the bottom",
-    "arrangement": "vertical",
+    "arrangement": "horizontal",
     "centerRadius": 0.4,
     "width": 1800,
     "views": [
@@ -131,24 +131,15 @@ const goslingSpec = (domain: any, mark: any, binSize: any, height: any, hoveredS
   }
 };
 
+const spec = goslingSpec([+0, 0.001], 'rect', 0, 130, null);
 
 function App() {
 
   // eslint-disable-next-line
   const gosRef = useRef<any>(null);
 
-  // eslint-disable-next-line
-  const [min, setMin] = useState(0);
-  // eslint-disable-next-line
-  const [height, setHeight] = useState(130);
-  // eslint-disable-next-line
-  const [mark, setMark] = useState('rect');
-  // eslint-disable-next-line
-  const [binSize, setBinSize] = useState(0);
-  // eslint-disable-next-line
-  const [hoveredSample, setHoveredSample] = useState();
-
   const [coordinates, setCoordinates] = useState('None')
+  const [lineupData, setLineupData] = useState(arr);
 
   // validate the spec
   const validity = validateGoslingSpec(goslingSpec);
@@ -169,12 +160,32 @@ function App() {
 
   }, [gosRef]);
 
-  const zoomTo = () => {
+  const updateCoordinatesString = (event : any) => {
+    console.log(event)
+    const chromInfo = ChromosomeInfo(
+      'http://higlass.io/api/v1/chrom-sizes/?id=Ajn_ttUUQbqgtOD4nOt-IA',
+      (chromInfo:any) => { 
+        if(chromInfo){
+          console.log('chromInfo:', chromInfo); 
+          const chromPosStart = chromInfo.absToChr(event.xDomain[0]);
+          const chromPosEnd = chromInfo.absToChr(event.xDomain[1]);
+          setCoordinates(`Range from chromosome ${chromPosStart[0]} at ${chromPosStart[1]} to  chromosome ${chromPosEnd[0]} at ${chromPosEnd[1]}`)
+          const filteredLineupData = arr.filter((gene) => {
+            const geneStart  = chromInfo.chrToAbs([gene['Chromosome'], gene['Seq Region Start']]);
+            const geneEnd    = chromInfo.chrToAbs([gene['Chromosome'], gene['Seq Region End']]);
+            return geneStart >= chromPosStart[1] && geneEnd < chromPosEnd[1];
+          });
+          setLineupData(filteredLineupData);
+        }
+      });
+  }
+
+  const debouncedUpdateCoordinateString = debounce(updateCoordinatesString, 500);
+
+  const activateSync = () => {
     if (!gosRef.current) return;
     //gosRef.current.api.zoomTo('linear-view-1','chr1:10000-15000')
-    gosRef.current.hgRef.current.api.on('location', (event:any) => {
-      console.log(event)
-    },'linear-view-1');
+    gosRef.current.hgRef.current.api.on('location', debouncedUpdateCoordinateString, 'linear-view-1');
     // gosRef.current.hgRef.current.api.on('location', (event:any) => {
     //   console.log(event)
     // },'circular-view-1');
@@ -196,15 +207,12 @@ function App() {
     <div className="App">
       <GoslingComponent
         ref={gosRef}
-        spec={goslingSpec([+min, 0.001], mark, binSize, height, hoveredSample)}
-        compiled={(spec, vConf) => {
-          console.log(vConf);
-        }}
+        spec={spec}
       />
-      <button onClick={zoomTo}>Sync</button>
+      <button onClick={activateSync}>Sync</button>
       <button onClick={getLocation}>Get location</button>
       <p>{coordinates}</p>
-      <LineUp data={arr} ></LineUp>
+      <LineUp data={lineupData} ></LineUp>
     </div>
   );
 }
